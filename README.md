@@ -16,7 +16,9 @@ Vesta is an S3-compatible object storage solution that runs in your own data cen
 
 ## Download
 
-The latest packages (Windows / Debian·Ubuntu / RHEL·Fedora) are on the **[Releases](https://github.com/iwasoftcom/vesta/releases/latest)** page.
+Windows, Debian/Ubuntu and RHEL/Fedora packages are on the product page:
+**https://iwasoft.com/products/vesta**
+
 Docker: `docker pull iwasoftcom/vesta:latest`
 
 ## Documentation
