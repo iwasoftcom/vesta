@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vesta — Documentation</title>
+<style>
+:root{
+  --bg:#FAFAF7; --ink:#141412; --muted:#6b6b66; --accent:#4E9F3D;
+  --amber:#B45309; --card:#ffffff; --line:#e4e4de; --code-bg:#f1f1ec;
+  --accent-soft:#4e9f3d1a;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#161614; --ink:#ecece8; --muted:#9a9a92; --accent:#6fbf5a;
+         --amber:#d99a4e; --card:#1e1e1b; --line:#33332e; --code-bg:#232320;
+         --accent-soft:#6fbf5a22; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.65 -apple-system,"Segoe UI",Roboto,"Inter",sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:2.4rem 1.3rem 4rem}
+header{border-bottom:1px solid var(--line);padding-bottom:1.4rem;margin-bottom:2rem}
+.brand{font-size:2.1rem;font-weight:800;letter-spacing:-.01em}
+.tag{color:var(--muted);margin-top:.25rem}
+.lede{font-size:1.12rem;margin:1rem 0 0}
+h2{font-size:1.32rem;margin:2.4rem 0 .8rem;padding-top:.4rem}
+h3{font-size:1.05rem;margin:1.4rem 0 .5rem}
+p{margin:.7rem 0}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--code-bg);padding:.1em .38em;border-radius:5px;
+  font:0.86em ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:9px;
+  padding:.9rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0;font-size:.85rem;line-height:1.55}
+:root[dir="rtl"] pre, [dir="rtl"] pre{direction:ltr;text-align:left}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.95rem}
+th,td{border:1px solid var(--line);padding:.5rem .65rem;text-align:start;vertical-align:top}
+th{background:var(--accent-soft)}
+ul{padding-inline-start:1.3rem}
+li{margin:.3rem 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.9rem;margin:1rem 0}
+.card{border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;background:var(--card)}
+.card b{color:var(--accent)}
+.note{border-inline-start:3px solid var(--accent);background:var(--accent-soft);
+  padding:.7rem 1rem;border-radius:0 8px 8px 0;margin:1.2rem 0}
+:root[dir="rtl"] .note{border-radius:8px 0 0 8px}
+.dg{width:100%;height:auto;margin:1rem 0}
+.dg .box{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+.dg .band{fill:var(--accent-soft);stroke:var(--line);stroke-width:1.5}
+.dg .b{fill:var(--ink);font:600 14px sans-serif}
+.dg .m{fill:var(--muted);font:12px sans-serif}
+.dg .ln{stroke:var(--muted);stroke-width:1.5;fill:none}
+footer{border-top:1px solid var(--line);margin-top:3rem;padding-top:1.2rem;
+  color:var(--muted);font-size:.9rem}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">Vesta</div>
+  <div class="tag">the S3-compatible object store that closes the gaps · v0.1.0</div>
+  <p class="lede">A layered, S3-compatible object storage system written in
+  Rust — a single binary that scales from a laptop to a Raft-replicated
+  cluster, without switching software.</p>
+</header>
+
+<h2 id="what">What Vesta is</h2>
+<p>Vesta targets the feature gaps found across today's object stores (S3,
+GCS, Azure Blob, R2, B2, Wasabi, MinIO, Ceph, SeaweedFS, Garage). It speaks
+the real S3 API — SigV4 signing, multipart upload, versioning, conditional
+requests, batch delete — and separates the <b>control plane</b> (metadata:
+buckets, object index, IAM) from the <b>data plane</b> (content-addressed
+blocks on disk) so each can be replaced or scaled independently.</p>
+
+<h2 id="principles">Design principles</h2>
+<div class="grid">
+  <div class="card"><b>Control plane / data plane separation.</b><br>Metadata
+  and bytes live behind separate trait boundaries. Storage engines, consensus
+  backends and encryption layers are swapped without touching the S3 API layer.</div>
+  <div class="card"><b>No admin knob left in a config file.</b><br>Rate
+  limits, GC intervals, CORS, quotas and policy are runtime settings, replicated
+  and changed live from the admin console — not environment variables that
+  need a restart.</div>
+  <div class="card"><b>Compatibility is a contract, not an approximation.</b><br>
+  SigV4 (headers, presigned URLs, streaming chunks), multipart, versioning and
+  conditional requests are exercised against real AWS SDK test suites, not
+  hand-picked examples.</div>
+</div>
+
+<h2 id="different">How it differs from a typical single-binary object store</h2>
+<table>
+<tr><th></th><th>Typical MinIO-style store</th><th>Vesta</th></tr>
+<tr><td>Consensus</td><td>Fixed erasure-set / gateway model</td><td>Networked Raft with dynamic membership — a battle-tested engine (<a href="#architecture">openraft</a>) is a drop-in, opt-in backend behind the same write path</td></tr>
+<tr><td>Runtime configuration</td><td>Environment variables, restart to change</td><td>Admin console mutates live settings (rate limit, GC interval, CORS, quotas) through the replicated log — no restart</td></tr>
+<tr><td>Metadata durability</td><td>Varies by backend</td><td>Append-only WAL with snapshot compaction; every node persists independently and catches up via normal log replication</td></tr>
+<tr><td>Multi-tenancy</td><td>Bolted on or absent</td><td>First-class tenants with per-tenant bucket quotas and SigV4 identity scoping</td></tr>
+<tr><td>AI agent access</td><td>Not applicable</td><td>A read-only <a href="#more">MCP server</a> exposes native search and S3 Select as agent tools, with per-key tenant isolation</td></tr>
+</table>
+
+<h2 id="quickstart">Quick start</h2>
+<p>Run the server (container image, or the standalone binary):</p>
+<pre><code># Docker
+docker run -p 9000:9000 iwasoftcom/vesta:0.1.0
+
+# or the binary
+VESTA_DATA_DIR=/var/lib/vesta VESTA_ACCESS_KEY=AKIDEXAMPLE VESTA_SECRET_KEY=secret vesta</code></pre>
+<p>Talk to it with any S3 client:</p>
+<pre><code>aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://photos
+aws --endpoint-url http://127.0.0.1:9000 s3 cp ./x.jpg s3://photos/x.jpg
+aws --endpoint-url http://127.0.0.1:9000 s3 ls s3://photos</code></pre>
+
+<h2 id="features">What's inside</h2>
+<div class="grid">
+  <div class="card"><b>Rate limiting</b><br>Per-tenant token bucket, enabled
+  and tuned live from the admin console; misbehaving callers get a proper
+  <code>SlowDown</code>, not a dropped connection.</div>
+  <div class="card"><b>Distributed consensus</b><br>A networked Raft with
+  leader election, dynamic membership and durable log replication — or opt
+  into <code>openraft</code>, a proven implementation, behind the identical
+  write path.</div>
+  <div class="card"><b>Erasure coding &amp; encryption</b><br>Reed–Solomon
+  erasure-coded storage and AES-256-GCM encryption at rest, both dedup-safe
+  (content-addressed blocks).</div>
+  <div class="card"><b>Versioning &amp; Object Lock</b><br>Full version
+  history, delete markers, and WORM retention (GOVERNANCE/COMPLIANCE) with
+  legal hold.</div>
+  <div class="card"><b>Multi-tenancy</b><br>Tenants are first-class: per-tenant
+  bucket quotas, SigV4 identity scoping, bucket policy and canned ACLs.</div>
+  <div class="card"><b>Search, Select &amp; Lambda</b><br>Native inverted-index
+  metadata search, S3 Select (CSV SQL), and transform-on-read (Object Lambda–style).</div>
+  <div class="card"><b>Replication &amp; events</b><br>Async geo-replication,
+  a change-stream event bus, and pluggable webhook notification delivery.</div>
+  <div class="card"><b>Lifecycle &amp; inventory</b><br>Expiration and
+  storage-class transition rules, plus CSV inventory reports on demand.</div>
+</div>
+
+<h2 id="admin">Admin console</h2>
+<p>A separate, stateless management app (embedded React + MUI UI) proxies
+writes to the cluster nodes — it holds no data of its own; every change is
+replicated through the same consensus log the S3 API uses. From it you can:</p>
+<ul>
+  <li><b>Users, keys &amp; tenants</b> — dashboard accounts, SigV4 API keys, per-tenant quotas.</li>
+  <li><b>Buckets &amp; policy</b> — create/delete, bucket policy JSON, public-read toggles.</li>
+  <li><b>Cluster</b> — node health, add/remove members, minority-write and auto-shrink toggles.</li>
+  <li><b>Runtime settings</b> — rate limit, block-GC interval, CORS origin: changed live, replicated to every node, persisted across restarts.</li>
+</ul>
+
+<h2 id="architecture">Architecture</h2>
+<p>A single binary, two network doors, and a strict layering rule: the S3 API
+layer never touches storage directly — everything routes through the
+coordinator, and every mutation that must be cluster-wide goes through the
+consensus log before it is visible to a read.</p>
+<figure>
+<svg class="dg" viewBox="0 0 760 300" role="img" aria-label="Vesta architecture: clients, two doors, coordinator, consensus and storage">
+  <rect class="box" x="20" y="16" width="340" height="52" rx="9"/>
+  <text class="b" x="190" y="40" text-anchor="middle">S3 SDKs · aws-cli</text>
+  <text class="m" x="190" y="58" text-anchor="middle">SigV4 · multipart · versioning</text>
+  <rect class="box" x="400" y="16" width="340" height="52" rx="9"/>
+  <text class="b" x="570" y="40" text-anchor="middle">Admin console · AI agents (MCP)</text>
+  <text class="m" x="570" y="58" text-anchor="middle">stateless proxy · tenant-scoped tools</text>
+  <path class="ln" d="M190 68 V96"/>
+  <path class="ln" d="M570 68 V96"/>
+  <rect class="box" x="20" y="100" width="340" height="48" rx="9"/>
+  <text class="b" x="190" y="129" text-anchor="middle">S3 API · :9000</text>
+  <rect class="box" x="400" y="100" width="340" height="48" rx="9"/>
+  <text class="b" x="570" y="129" text-anchor="middle">Admin API · :9500</text>
+  <path class="ln" d="M190 148 V176"/>
+  <path class="ln" d="M570 148 V176"/>
+  <rect class="band" x="20" y="180" width="720" height="60" rx="10"/>
+  <text class="b" x="380" y="205" text-anchor="middle">coordinator (Rust): buckets · objects · multipart · policy · lifecycle · search</text>
+  <text class="m" x="380" y="225" text-anchor="middle">consensus log (custom Raft or openraft) — mutations commit before they read back</text>
+  <path class="ln" d="M380 240 V268"/>
+  <rect class="box" x="180" y="272" width="400" height="24" rx="7"/>
+  <text class="b" x="380" y="289" text-anchor="middle">metadata (WAL) · block storage (erasure-coded, encrypted, deduped)</text>
+</svg>
+</figure>
+
+<h2 id="more">Downloads &amp; source</h2>
+<ul>
+  <li><b>Downloads:</b> compiled artifacts (Windows, Debian <code>.deb</code>,
+  RedHat <code>.rpm</code>) and the Docker image are published per version on
+  <a href="https://iwasoft.com">iwasoft.com</a> → Products → Vesta. Source
+  code is not part of the downloads.</li>
+  <li><b>Compatibility:</b> S3 API surface (SigV4, multipart, versioning,
+  conditional requests) is exercised continuously against real AWS SDK
+  integration tests.</li>
+  <li><b>Honest status:</b> early development — not yet independently
+  security-audited, no production mileage yet. These are disclosures, not
+  caveats on the roadmap.</li>
+</ul>
+
+<footer>
+  Vesta v0.1.0 · S3-compatible · Rust, content-addressed storage, networked
+  Raft (custom or openraft). © iwasoft.
+</footer>
+
+</div>
+</body>
+</html>

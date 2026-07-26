@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vesta — Dökümantasyon</title>
+<style>
+:root{
+  --bg:#FAFAF7; --ink:#141412; --muted:#6b6b66; --accent:#4E9F3D;
+  --amber:#B45309; --card:#ffffff; --line:#e4e4de; --code-bg:#f1f1ec;
+  --accent-soft:#4e9f3d1a;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#161614; --ink:#ecece8; --muted:#9a9a92; --accent:#6fbf5a;
+         --amber:#d99a4e; --card:#1e1e1b; --line:#33332e; --code-bg:#232320;
+         --accent-soft:#6fbf5a22; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.65 -apple-system,"Segoe UI",Roboto,"Inter",sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:2.4rem 1.3rem 4rem}
+header{border-bottom:1px solid var(--line);padding-bottom:1.4rem;margin-bottom:2rem}
+.brand{font-size:2.1rem;font-weight:800;letter-spacing:-.01em}
+.tag{color:var(--muted);margin-top:.25rem}
+.lede{font-size:1.12rem;margin:1rem 0 0}
+h2{font-size:1.32rem;margin:2.4rem 0 .8rem;padding-top:.4rem}
+h3{font-size:1.05rem;margin:1.4rem 0 .5rem}
+p{margin:.7rem 0}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--code-bg);padding:.1em .38em;border-radius:5px;
+  font:0.86em ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:9px;
+  padding:.9rem 1rem;overflow-x:auto}
+pre code{background:none;padding:0;font-size:.85rem;line-height:1.55}
+:root[dir="rtl"] pre, [dir="rtl"] pre{direction:ltr;text-align:left}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.95rem}
+th,td{border:1px solid var(--line);padding:.5rem .65rem;text-align:start;vertical-align:top}
+th{background:var(--accent-soft)}
+ul{padding-inline-start:1.3rem}
+li{margin:.3rem 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.9rem;margin:1rem 0}
+.card{border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;background:var(--card)}
+.card b{color:var(--accent)}
+.note{border-inline-start:3px solid var(--accent);background:var(--accent-soft);
+  padding:.7rem 1rem;border-radius:0 8px 8px 0;margin:1.2rem 0}
+:root[dir="rtl"] .note{border-radius:8px 0 0 8px}
+.dg{width:100%;height:auto;margin:1rem 0}
+.dg .box{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+.dg .band{fill:var(--accent-soft);stroke:var(--line);stroke-width:1.5}
+.dg .b{fill:var(--ink);font:600 14px sans-serif}
+.dg .m{fill:var(--muted);font:12px sans-serif}
+.dg .ln{stroke:var(--muted);stroke-width:1.5;fill:none}
+footer{border-top:1px solid var(--line);margin-top:3rem;padding-top:1.2rem;
+  color:var(--muted);font-size:.9rem}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">Vesta</div>
+  <div class="tag">eksikleri kapatan S3-uyumlu nesne deposu · v0.1.0</div>
+  <p class="lede">Rust ile yazılmış, katmanlı, S3-uyumlu bir object storage
+  sistemi — tek bir ikili dosya, yazılımı değiştirmeden dizüstü bilgisayardan
+  Raft-replikeli bir cluster'a kadar ölçeklenir.</p>
+</header>
+
+<h2 id="what">Vesta nedir</h2>
+<p>Vesta, günümüzün nesne depolama çözümlerinde (S3, GCS, Azure Blob, R2, B2,
+Wasabi, MinIO, Ceph, SeaweedFS, Garage) görülen özellik eksiklerini hedef
+alır. Gerçek S3 API'sini konuşur — SigV4 imzalama, çok parçalı yükleme,
+versiyonlama, koşullu istekler, toplu silme — ve <b>kontrol düzlemini</b>
+(metadata: bucket'lar, nesne indeksi, IAM) <b>veri düzleminden</b> (diskteki
+içerik-adresli bloklar) tamamen ayırır, böylece her biri bağımsız olarak
+değiştirilebilir veya ölçeklenebilir.</p>
+
+<h2 id="principles">Tasarım ilkeleri</h2>
+<div class="grid">
+  <div class="card"><b>Kontrol düzlemi / veri düzlemi ayrımı.</b><br>Metadata
+  ve byte'lar ayrı trait sınırlarının arkasında yaşar. Depolama motorları,
+  konsensüs arka uçları ve şifreleme katmanları S3 API katmanına dokunmadan
+  değiştirilir.</div>
+  <div class="card"><b>Config dosyasında unutulmuş bir yönetim düğmesi
+  kalmaz.</b><br>Hız sınırları, GC aralıkları, CORS, kotalar ve politika
+  çalışma-zamanı ayarlarıdır; admin konsolundan canlı değiştirilir ve
+  replike edilir — yeniden başlatma gerektiren ortam değişkenleri değil.</div>
+  <div class="card"><b>Uyumluluk bir yaklaşıklık değil, sözleşmedir.</b><br>
+  SigV4 (header, presigned URL, streaming chunk), çok parçalı yükleme,
+  versiyonlama ve koşullu istekler gerçek AWS SDK test paketlerine karşı
+  sürekli doğrulanır — elle seçilmiş örneklere karşı değil.</div>
+</div>
+
+<h2 id="different">Tipik tek-ikili nesne deposundan farkı</h2>
+<table>
+<tr><th></th><th>Tipik MinIO-tarzı depo</th><th>Vesta</th></tr>
+<tr><td>Konsensüs</td><td>Sabit erasure-set / gateway modeli</td><td>Dinamik üyelikli ağ-Raft — kanıtlanmış bir motor (<a href="#architecture">openraft</a>) aynı yazma yolunun arkasında takılabilir, opt-in bir arka uçtur</td></tr>
+<tr><td>Çalışma-zamanı yapılandırma</td><td>Ortam değişkenleri, değiştirmek için restart</td><td>Admin konsolu canlı ayarları (hız sınırı, GC aralığı, CORS, kota) replike log üzerinden değiştirir — restart yok</td></tr>
+<tr><td>Metadata kalıcılığı</td><td>Arka uca göre değişir</td><td>Snapshot sıkıştırmalı append-only WAL; her düğüm bağımsız kalıcı yazar ve normal log replikasyonuyla yakalanır</td></tr>
+<tr><td>Çok-kiracılılık</td><td>Sonradan eklenmiş veya yok</td><td>Birinci sınıf tenant'lar, tenant başına bucket kotası ve SigV4 kimlik izolasyonu</td></tr>
+<tr><td>AI ajan erişimi</td><td>Uygulanamaz</td><td>Salt-okunur bir <a href="#more">MCP sunucusu</a> native aramayı ve S3 Select'i ajan aracı olarak sunar, anahtar başına tenant izolasyonuyla</td></tr>
+</table>
+
+<h2 id="quickstart">Hızlı başlangıç</h2>
+<p>Sunucuyu çalıştır (konteyner imajı veya bağımsız ikili):</p>
+<pre><code># Docker
+docker run -p 9000:9000 iwasoftcom/vesta:0.1.0
+
+# veya ikili dosya
+VESTA_DATA_DIR=/var/lib/vesta VESTA_ACCESS_KEY=AKIDEXAMPLE VESTA_SECRET_KEY=secret vesta</code></pre>
+<p>Herhangi bir S3 istemcisiyle konuş:</p>
+<pre><code>aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://fotograflar
+aws --endpoint-url http://127.0.0.1:9000 s3 cp ./x.jpg s3://fotograflar/x.jpg
+aws --endpoint-url http://127.0.0.1:9000 s3 ls s3://fotograflar</code></pre>
+
+<h2 id="features">İçindekiler</h2>
+<div class="grid">
+  <div class="card"><b>Hız sınırlama</b><br>Tenant başına token-kovası, admin
+  konsolundan canlı açılıp ayarlanır; kötü davranan istemciler bağlantı
+  kesilmesi yerine düzgün bir <code>SlowDown</code> alır.</div>
+  <div class="card"><b>Dağıtık konsensüs</b><br>Lider seçimi, dinamik üyelik
+  ve kalıcı log replikasyonu olan bir ağ-Raft — veya aynı yazma yolunun
+  arkasında kanıtlanmış bir implementasyon olan <code>openraft</code>'a
+  opt-in ol.</div>
+  <div class="card"><b>Erasure coding ve şifreleme</b><br>Reed–Solomon
+  erasure-coded depolama ve AES-256-GCM bekleme-durumu şifrelemesi, ikisi de
+  dedup-güvenli (içerik-adresli bloklar).</div>
+  <div class="card"><b>Versiyonlama ve Object Lock</b><br>Tam versiyon
+  geçmişi, silme işaretçileri ve yasal tutma ile WORM saklama
+  (GOVERNANCE/COMPLIANCE).</div>
+  <div class="card"><b>Çok-kiracılılık</b><br>Tenant'lar birinci sınıftır:
+  tenant başına bucket kotası, SigV4 kimlik izolasyonu, bucket policy ve
+  hazır ACL'ler.</div>
+  <div class="card"><b>Arama, Select ve Lambda</b><br>Native ters-indeksli
+  metadata araması, S3 Select (CSV SQL) ve okuma-anında dönüştürme
+  (Object Lambda tarzı).</div>
+  <div class="card"><b>Replikasyon ve olaylar</b><br>Asenkron coğrafi
+  replikasyon, bir değişim-akışı olay veriyolu ve takılabilir webhook
+  bildirim teslimi.</div>
+  <div class="card"><b>Yaşam döngüsü ve envanter</b><br>Süre sonu ve
+  depolama-sınıfı geçiş kuralları, ayrıca talep üzerine CSV envanter
+  raporları.</div>
+</div>
+
+<h2 id="admin">Yönetim konsolu</h2>
+<p>Ayrı, durumsuz bir yönetim uygulaması (gömülü React + MUI arayüzü) yazmaları
+cluster düğümlerine proxy'ler — kendi verisini tutmaz; her değişiklik S3
+API'sinin kullandığı aynı konsensüs log'u üzerinden replike edilir. Buradan:</p>
+<ul>
+  <li><b>Kullanıcılar, anahtarlar ve tenant'lar</b> — konsol hesapları, SigV4 API anahtarları, tenant başına kotalar.</li>
+  <li><b>Bucket'lar ve policy</b> — oluştur/sil, bucket policy JSON'u, public-read anahtarları.</li>
+  <li><b>Cluster</b> — düğüm sağlığı, üye ekle/çıkar, minority-write ve auto-shrink anahtarları.</li>
+  <li><b>Çalışma-zamanı ayarları</b> — hız sınırı, blok-GC aralığı, CORS origin: canlı değiştirilir, her düğüme replike edilir, restart'lar arasında kalıcıdır.</li>
+</ul>
+
+<h2 id="architecture">Mimari</h2>
+<p>Tek bir ikili, iki ağ kapısı ve katı bir katmanlama kuralı: S3 API katmanı
+depolamaya asla doğrudan dokunmaz — her şey koordinatörden geçer ve
+küme-genelinde olması gereken her mutasyon, bir okumaya görünür olmadan önce
+konsensüs log'undan geçer.</p>
+<figure>
+<svg class="dg" viewBox="0 0 760 300" role="img" aria-label="Vesta mimarisi: istemciler, iki kapı, koordinatör, konsensüs ve depolama">
+  <rect class="box" x="20" y="16" width="340" height="52" rx="9"/>
+  <text class="b" x="190" y="40" text-anchor="middle">S3 SDK'ları · aws-cli</text>
+  <text class="m" x="190" y="58" text-anchor="middle">SigV4 · çok parçalı · versiyonlama</text>
+  <rect class="box" x="400" y="16" width="340" height="52" rx="9"/>
+  <text class="b" x="570" y="40" text-anchor="middle">Yönetim konsolu · AI ajanları (MCP)</text>
+  <text class="m" x="570" y="58" text-anchor="middle">durumsuz proxy · tenant kapsamlı araçlar</text>
+  <path class="ln" d="M190 68 V96"/>
+  <path class="ln" d="M570 68 V96"/>
+  <rect class="box" x="20" y="100" width="340" height="48" rx="9"/>
+  <text class="b" x="190" y="129" text-anchor="middle">S3 API · :9000</text>
+  <rect class="box" x="400" y="100" width="340" height="48" rx="9"/>
+  <text class="b" x="570" y="129" text-anchor="middle">Admin API · :9500</text>
+  <path class="ln" d="M190 148 V176"/>
+  <path class="ln" d="M570 148 V176"/>
+  <rect class="band" x="20" y="180" width="720" height="60" rx="10"/>
+  <text class="b" x="380" y="205" text-anchor="middle">koordinatör (Rust): bucket · nesne · çok parçalı · policy · yaşam döngüsü · arama</text>
+  <text class="m" x="380" y="225" text-anchor="middle">konsensüs log'u (özel Raft veya openraft) — mutasyonlar okumadan önce commit edilir</text>
+  <path class="ln" d="M380 240 V268"/>
+  <rect class="box" x="180" y="272" width="400" height="24" rx="7"/>
+  <text class="b" x="380" y="289" text-anchor="middle">metadata (WAL) · blok depolama (erasure-coded, şifreli, dedup'lı)</text>
+</svg>
+</figure>
+
+<h2 id="more">İndirmeler ve kaynak</h2>
+<ul>
+  <li><b>İndirmeler:</b> derlenmiş artefaktlar (Windows, Debian
+  <code>.deb</code>, RedHat <code>.rpm</code>) ve Docker imajı her versiyon
+  için <a href="https://iwasoft.com">iwasoft.com</a> → Ürünler → Vesta'da
+  yayınlanır. Kaynak kod indirmelerin bir parçası değildir.</li>
+  <li><b>Uyumluluk:</b> S3 API yüzeyi (SigV4, çok parçalı, versiyonlama,
+  koşullu istekler) gerçek AWS SDK entegrasyon testlerine karşı sürekli
+  doğrulanır.</li>
+  <li><b>Dürüst durum:</b> erken geliştirme aşamasında — henüz bağımsız
+  güvenlik denetiminden geçmedi, üretim kilometresi yok. Bunlar yol
+  haritasına dair çekinceler değil, ifşalardır.</li>
+</ul>
+
+<footer>
+  Vesta v0.1.0 · S3-uyumlu · Rust, içerik-adresli depolama, ağ-Raft (özel
+  veya openraft). © iwasoft.
+</footer>
+
+</div>
+</body>
+</html>
