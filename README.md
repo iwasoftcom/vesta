@@ -2,7 +2,7 @@
 
 Kurumsal object storage — S3 uyumlu, ölçeklenebilir nesne depolama.
 
-> Kurumsal yazılım · **iwasoft** — ürün sayfası: https://iwasoft.com/urunler/vesta
+> Kurumsal yazılım · **iwasoft** — ürün sayfası: https://iwasoft.com/products/vesta
 
 ## İndir
 
