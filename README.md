@@ -1,25 +1,31 @@
 # Vesta
 
-Kurumsal object storage — S3 uyumlu, ölçeklenebilir nesne depolama.
+Enterprise object storage — S3-compatible and scalable.
 
-> Kurumsal yazılım · **iwasoft** — ürün sayfası: https://iwasoft.com/products/vesta
+> Enterprise software by **iwasoft** — product page: https://iwasoft.com/products/vesta
 
-## İndir
+## What is Vesta?
 
-En güncel paketler (Windows / Debian·Ubuntu / RHEL·Fedora) **[Releases](https://github.com/iwasoftcom/vesta/releases/latest)** altındadır.
+Vesta is an S3-compatible object storage solution that runs in your own data center. It scales horizontally to petabytes, with versioning, lifecycle and replication management, so your existing S3 tooling works unchanged on infrastructure you control.
+
+**Highlights**
+
+- S3-compatible API
+- Horizontal scaling to petabytes
+- Multi-region replication
+
+## Download
+
+The latest packages (Windows / Debian·Ubuntu / RHEL·Fedora) are on the **[Releases](https://github.com/iwasoftcom/vesta/releases/latest)** page.
 Docker: `docker pull iwasoftcom/vesta:latest`
 
-## Dökümanlar
+## Documentation
 
-7 dilde dökümantasyon [`docs/`](./docs) klasöründedir (kanonik: İngilizce).
+Documentation is available in 7 languages in [`docs/`](./docs) (canonical source: English).
 
-## Kod örnekleri
+## Support
 
-Kullanım örnekleri [`examples/`](./examples) klasöründedir.
-
-## Destek
-
-Yazılım ücretsizdir; kurumsal destek için: https://iwasoft.com/iletisim
+The software is free to use; for enterprise support: https://iwasoft.com/contact
 
 ---
-_Bu repo bir dağıtım (paket + döküman + örnek) reposudur — kaynak kodu içermez._
+_This is a distribution repository — packages, documentation and examples. It does **not** contain source code._
